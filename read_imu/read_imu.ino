@@ -155,9 +155,9 @@ void loop() {
   sensors_event_t temp;
   ism330dhcx.getEvent(&accel, &gyro, &temp);
 
-  Serial.print("\t\tTemperature ");
-  Serial.print(temp.temperature);
-  Serial.println(" deg C");
+  // Serial.print("\t\tTemperature ");
+  // Serial.print(temp.temperature);
+  // Serial.println(" deg C");
 
   /* Display the results (acceleration is measured in m/s^2) */
   Serial.print("\t\tAccel X: ");
@@ -177,6 +177,20 @@ void loop() {
   Serial.print(gyro.gyro.z);
   Serial.println(" radians/s ");
   Serial.println();
+
+  // Tilt angles
+  float ax = accel.acceleration.x;
+  float ay = accel.acceleration.y;
+  float az = accel.acceleration.z;
+
+  float roll = atan2(ay, az) * 180.0 / PI;
+  float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
+
+  Serial.print("Roll: ");
+  Serial.print(roll);
+  Serial.print(" deg, Pitch: ");
+  Serial.print(pitch);
+  Serial.println(" deg");
 
   delay(100);
 
