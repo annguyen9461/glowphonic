@@ -149,36 +149,12 @@ void setup(void) {
 }
 
 void loop() {
-  //  /* Get a new normalized sensor event */
   sensors_event_t accel;
   sensors_event_t gyro;
   sensors_event_t temp;
   ism330dhcx.getEvent(&accel, &gyro, &temp);
 
-  // Serial.print("\t\tTemperature ");
-  // Serial.print(temp.temperature);
-  // Serial.println(" deg C");
-
-  /* Display the results (acceleration is measured in m/s^2) */
-  // Serial.print("\t\tAccel X: ");
-  // Serial.print(accel.acceleration.x);
-  // Serial.print(" \tY: ");
-  // Serial.print(accel.acceleration.y);
-  // Serial.print(" \tZ: ");
-  // Serial.print(accel.acceleration.z);
-  // Serial.println(" m/s^2 ");
-
-  /* Display the results (rotation is measured in rad/s) */
-  // Serial.print("\t\tGyro X: ");
-  // Serial.print(gyro.gyro.x);
-  // Serial.print(" \tY: ");
-  // Serial.print(gyro.gyro.y);
-  // Serial.print(" \tZ: ");
-  // Serial.print(gyro.gyro.z);
-  // Serial.println(" radians/s ");
-  // Serial.println();
-
-  // Tilt angles
+  // Calculate roll and pitch
   float ax = accel.acceleration.x;
   float ay = accel.acceleration.y;
   float az = accel.acceleration.z;
@@ -186,29 +162,37 @@ void loop() {
   float roll = atan2(ay, az) * 180.0 / PI;
   float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
 
-  // Serial.print("Roll: ");
-  // Serial.print(roll);
-  // Serial.print(" deg, Pitch: ");
-  // Serial.print(pitch);
-  // Serial.println(" deg");
-
+  // Map roll
   int mappedRoll = 0;
-
-  // Map to 0–180 scheme
   if (roll >= 0) {
     mappedRoll = (int)roll;  // 0–90
   } else {
-    mappedRoll = 91 + (int)(-roll - 1);  // -1 to -90 => 91 to 180
+    mappedRoll = 91 + (int)(-roll - 1);  // -1 to -90 -> 91–180
   }
 
-  // Pack into 2 bytes + delimiter
-  int b1 = (mappedRoll >> 3);
-  int b2 = (mappedRoll & 7);
+  // Map pitch
+  int mappedPitch = 0;
+  if (pitch >= 0) {
+    mappedPitch = (int)pitch;
+  } else {
+    mappedPitch = 91 + (int)(-pitch - 1);
+  }
 
-  Serial.write(b1);
-  Serial.write(b2);
-  Serial.write(255);
+  // Pack roll
+  int roll_b1 = (mappedRoll >> 3);
+  int roll_b2 = (mappedRoll & 7);
 
-  delay(50);  // ~20 Hz
+  // Pack pitch
+  int pitch_b1 = (mappedPitch >> 3);
+  int pitch_b2 = (mappedPitch & 7);
 
+  // Send 5 bytes
+  Serial.write(roll_b1);
+  Serial.write(roll_b2);
+  Serial.write(pitch_b1);
+  Serial.write(pitch_b2);
+  Serial.write(255);  // delimiter
+
+  delay(50);  // 20 Hz
 }
+
