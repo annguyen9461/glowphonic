@@ -2,6 +2,9 @@
 #include <Adafruit_ISM330DHCX.h>
 #include <Adafruit_MPR121.h>
 
+#define trigPin 13
+#define echoPin 12
+
 // Create sensor objects
 Adafruit_ISM330DHCX imu;
 Adafruit_MPR121 cap = Adafruit_MPR121();
@@ -12,6 +15,10 @@ const uint8_t NUM_TOUCH_PINS = 12;
 void setup() {
   Serial.begin(115200);
   while (!Serial);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
 
   // Initialize IMU
   if (!imu.begin_I2C()) {
@@ -60,6 +67,29 @@ void loop() {
     uint8_t val = (touched & (1 << i)) ? 1: 0;
     Serial.write(val);
   }
+
+   // --- Ultrasonic Distance Sensor ---
+  long duration;
+  float distance;
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH, 30000);  // 30ms timeout
+  if (duration == 0) {
+    distance = 0;
+  } else {
+    distance = (duration / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance = (uint16_t)(distance * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance >> 3) & 0xFF);
+  Serial.write(scaledDistance & 0x07);
 
   // End of packet
   Serial.write(255);
