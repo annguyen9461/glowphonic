@@ -4,6 +4,8 @@
 
 #define trigPin 13
 #define echoPin 12
+#define trigPin2 8
+#define echoPin2 7
 
 // Create sensor objects
 Adafruit_ISM330DHCX imu;
@@ -18,7 +20,8 @@ void setup() {
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
 
   // Initialize IMU
   if (!imu.begin_I2C()) {
@@ -68,7 +71,7 @@ void loop() {
     Serial.write(val);
   }
 
-   // --- Ultrasonic Distance Sensor ---
+  // --- Ultrasonic Distance Sensor 1---
   long duration;
   float distance;
   digitalWrite(trigPin, LOW);
@@ -90,6 +93,30 @@ void loop() {
   // Send full 16-bit value as two bytes (little endian)
   Serial.write((scaledDistance >> 3) & 0xFF);
   Serial.write(scaledDistance & 0x07);
+
+  // --- Ultrasonic Distance Sensor 2---
+  long duration2;
+  float distance2;
+  digitalWrite(trigPin2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin2, LOW);
+
+  duration2 = pulseIn(echoPin2, HIGH, 30000);  // 30ms timeout
+  if (duration2 == 0) {
+    distance2 = 0;
+  } else {
+    distance2 = (duration2 / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance2 = (uint16_t)(distance2 * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance2 >> 3) & 0xFF);
+  Serial.write(scaledDistance2 & 0x07);
+
 
   // End of packet
   Serial.write(255);
