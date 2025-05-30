@@ -2,6 +2,15 @@
 #include <Adafruit_ISM330DHCX.h>
 #include <Adafruit_MPR121.h>
 
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN 4
+#define NUM_LEDS 60
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+int ledLevel = 0; // value from Max
+
+
 #define trigPin 13
 #define echoPin 12
 #define trigPin2 8
@@ -14,14 +23,32 @@ Adafruit_MPR121 cap = Adafruit_MPR121();
 // Touch constants
 const uint8_t NUM_TOUCH_PINS = 12;
 
+void blinkLED(uint8_t r, uint8_t g, uint8_t b, int delay_ms = 100) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();
+  delay(delay_ms);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, 0);
+  }
+  strip.show();
+  delay(delay_ms);
+}
+
 void setup() {
   Serial.begin(115200);
+
   while (!Serial);
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(trigPin2, OUTPUT);
   pinMode(echoPin2, INPUT);
+
+  strip.begin();
+  strip.show();  // Start with all LEDs off
+
 
   // Initialize IMU
   if (!imu.begin_I2C()) {
