@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <Adafruit_ISM330DHCX.h>
 #include <Adafruit_MPR121.h>
+#include "Adafruit_seesaw.h"
+#include <seesaw_neopixel.h>
 
 #include <Adafruit_NeoPixel.h>
 
@@ -10,15 +12,22 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 int ledLevel = 0; // value from Max
 
-
+// Distance sensor pins
 #define trigPin 13
 #define echoPin 12
 #define trigPin2 8
 #define echoPin2 7
 
+// Slider configuration
+#define SLIDER_I2C_ADDR 0x30
+#define ANALOGIN   18
+#define NEOPIXELOUT 14
+
 // Create sensor objects
 Adafruit_ISM330DHCX imu;
 Adafruit_MPR121 cap = Adafruit_MPR121();
+Adafruit_seesaw seesaw;
+seesaw_NeoPixel pixels = seesaw_NeoPixel(4, NEOPIXELOUT, NEO_GRB + NEO_KHZ800);
 
 // Touch constants
 const uint8_t NUM_TOUCH_PINS = 12;
@@ -36,6 +45,21 @@ void blinkLED(uint8_t r, uint8_t g, uint8_t b, int delay_ms = 100) {
   delay(delay_ms);
 }
 
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return seesaw_NeoPixel::Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return seesaw_NeoPixel::Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return seesaw_NeoPixel::Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -49,7 +73,6 @@ void setup() {
   strip.begin();
   strip.show();  // Start with all LEDs off
 
-
   // Initialize IMU
   if (!imu.begin_I2C()) {
     Serial.println("Failed to find ISM330DHCX IMU");
@@ -62,11 +85,40 @@ void setup() {
     while (1) delay(10);
   }
 
+  // Initialize Slider
+  if (!seesaw.begin(SLIDER_I2C_ADDR)) {
+    Serial.println("Slider seesaw not found!");
+    while(1) delay(10);
+  }
+
+  uint16_t pid;
+  uint8_t year, mon, day;
+  seesaw.getProdDatecode(&pid, &year, &mon, &day);
+  Serial.print("Slider found PID: ");
+  Serial.print(pid);
+  Serial.print(" datecode: ");
+  Serial.print(2000+year); Serial.print("/");
+  Serial.print(mon); Serial.print("/");
+  Serial.println(day);
+
+  if (pid != 5295) {
+    Serial.println("Wrong slider PID");
+    // Continue anyway - don't halt execution
+  }
+
+  if (!pixels.begin(SLIDER_I2C_ADDR)){
+    Serial.println("Slider pixels not found!");
+    // Continue anyway - don't halt execution
+  }
+
+  pixels.setBrightness(255);
+  pixels.show(); // Initialize all pixels to 'off'
+
   // IMU config (optional)
   imu.configInt1(false, false, true); // accel DRDY on INT1
   imu.configInt2(false, true, false); // gyro DRDY on INT2
 
-  Serial.println("Both IMU and Touch Sensor initialized.");
+  Serial.println("All sensors initialized.");
 }
 
 void loop() {
@@ -144,6 +196,18 @@ void loop() {
   Serial.write((scaledDistance2 >> 3) & 0xFF);
   Serial.write(scaledDistance2 & 0x07);
 
+  // --- Slider Potentiometer ---
+  uint16_t slide_val = seesaw.analogRead(ANALOGIN);
+  
+  // Update slider NeoPixels
+  for (uint8_t i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, Wheel(slide_val / 4));
+  }
+  pixels.show();
+
+  // Send slider value as two bytes (same format as distance sensors)
+  Serial.write((slide_val >> 3) & 0xFF);
+  Serial.write(slide_val & 0x07);
 
   // End of packet
   Serial.write(255);
