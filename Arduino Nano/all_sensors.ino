@@ -1,0 +1,271 @@
+#include <Wire.h>
+#include <Adafruit_ISM330DHCX.h>
+#include <Adafruit_MPR121.h>
+#include "Adafruit_seesaw.h"
+#include <seesaw_neopixel.h>
+
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN 4
+#define NUM_LEDS 60
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+int ledLevel = 0; // value from Max
+
+// Distance sensor pins
+#define trigPin 6
+#define echoPin 5
+#define trigPin2 8
+#define echoPin2 7
+#define trigPin3 10
+#define echoPin3 9
+#define trigPin4 12
+#define echoPin4 11
+
+// Slider configuration
+#define SLIDER_I2C_ADDR 0x30
+#define ANALOGIN   18
+#define NEOPIXELOUT 14
+
+// Create sensor objects
+Adafruit_ISM330DHCX imu;
+Adafruit_MPR121 cap = Adafruit_MPR121();
+Adafruit_seesaw seesaw;
+seesaw_NeoPixel pixels = seesaw_NeoPixel(4, NEOPIXELOUT, NEO_GRB + NEO_KHZ800);
+
+// Touch constants
+const uint8_t NUM_TOUCH_PINS = 12;
+
+void blinkLED(uint8_t r, uint8_t g, uint8_t b, int delay_ms = 100) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();
+  delay(delay_ms);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, 0);
+  }
+  strip.show();
+  delay(delay_ms);
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return seesaw_NeoPixel::Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return seesaw_NeoPixel::Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return seesaw_NeoPixel::Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  while (!Serial);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
+  pinMode(trigPin3, OUTPUT);
+  pinMode(echoPin3, INPUT);
+  pinMode(trigPin4, OUTPUT);
+  pinMode(echoPin4, INPUT);
+
+  strip.begin();
+  strip.show();  // Start with all LEDs off
+
+  // Initialize IMU
+  if (!imu.begin_I2C()) {
+    Serial.println("Failed to find ISM330DHCX IMU");
+    while (1) delay(10);
+  }
+
+  // Initialize MPR121
+  if (!cap.begin(0x5A)) {  // Default I2C address for MPR121
+    Serial.println("MPR121 not found");
+    while (1) delay(10);
+  }
+
+  // Initialize Slider
+  if (!seesaw.begin(SLIDER_I2C_ADDR)) {
+    Serial.println("Slider seesaw not found!");
+    while(1) delay(10);
+  }
+
+  uint16_t pid;
+  uint8_t year, mon, day;
+  seesaw.getProdDatecode(&pid, &year, &mon, &day);
+  Serial.print("Slider found PID: ");
+  Serial.print(pid);
+  Serial.print(" datecode: ");
+  Serial.print(2000+year); Serial.print("/");
+  Serial.print(mon); Serial.print("/");
+  Serial.println(day);
+
+  if (pid != 5295) {
+    Serial.println("Wrong slider PID");
+    // Continue anyway - don't halt execution
+  }
+
+  if (!pixels.begin(SLIDER_I2C_ADDR)){
+    Serial.println("Slider pixels not found!");
+    // Continue anyway - don't halt execution
+  }
+
+  pixels.setBrightness(255);
+  pixels.show(); // Initialize all pixels to 'off'
+
+  // IMU config (optional)
+  imu.configInt1(false, false, true); // accel DRDY on INT1
+  imu.configInt2(false, true, false); // gyro DRDY on INT2
+
+  Serial.println("All sensors initialized.");
+}
+
+void loop() {
+  // --- Get IMU data ---
+  sensors_event_t accel, gyro, temp;
+  imu.getEvent(&accel, &gyro, &temp);
+
+  float ax = accel.acceleration.x;
+  float ay = accel.acceleration.y;
+  float az = accel.acceleration.z;
+
+  float roll = atan2(ay, az) * 180.0 / PI;
+  float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
+
+  // Map to 0–180
+  int mappedRoll = roll >= 0 ? (int)roll : 91 + (int)(-roll - 1);
+  int mappedPitch = pitch >= 0 ? (int)pitch : 91 + (int)(-pitch - 1);
+
+  // --- Send roll and pitch ---
+  Serial.write((mappedRoll >> 3) & 0xFF);
+  Serial.write(mappedRoll & 0x07);
+  Serial.write((mappedPitch >> 3) & 0xFF);
+  Serial.write(mappedPitch & 0x07);
+
+  // --- Send each touch pad state: 0 or 1 ---
+  uint16_t touched = cap.touched();  // 12-bit bitmask
+  for (int i = 0; i < 12; i++) {
+    uint8_t val = (touched & (1 << i)) ? 1: 0;
+    Serial.write(val);
+  }
+
+  // --- Ultrasonic Distance Sensor 1---
+  long duration;
+  float distance;
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH, 30000);  // 30ms timeout
+  if (duration == 0) {
+    distance = 0;
+  } else {
+    distance = (duration / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance = (uint16_t)(distance * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance >> 3) & 0xFF);
+  Serial.write(scaledDistance & 0x07);
+
+  // --- Ultrasonic Distance Sensor 2---
+  long duration2;
+  float distance2;
+  digitalWrite(trigPin2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin2, LOW);
+
+  duration2 = pulseIn(echoPin2, HIGH, 30000);  // 30ms timeout
+  if (duration2 == 0) {
+    distance2 = 0;
+  } else {
+    distance2 = (duration2 / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance2 = (uint16_t)(distance2 * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance2 >> 3) & 0xFF);
+  Serial.write(scaledDistance2 & 0x07);
+
+  // --- Slider Potentiometer ---
+  uint16_t slide_val = seesaw.analogRead(ANALOGIN);
+  
+  // Update slider NeoPixels
+  for (uint8_t i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, Wheel(slide_val / 4));
+  }
+  pixels.show();
+
+  // Send slider value as two bytes (same format as distance sensors)
+  Serial.write((slide_val >> 3) & 0xFF);
+  Serial.write(slide_val & 0x07);
+
+    // --- Ultrasonic Distance Sensor 3 ---
+  long duration3;
+  float distance3;
+  digitalWrite(trigPin3, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin3, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin3, LOW);
+
+  duration3 = pulseIn(echoPin3, HIGH, 30000);  // 30ms timeout
+  if (duration3 == 0) {
+    distance3 = 0;
+  } else {
+    distance3 = (duration3 / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance3 = (uint16_t)(distance3 * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance3 >> 3) & 0xFF);
+  Serial.write(scaledDistance3 & 0x07);
+
+  // --- Ultrasonic Distance Sensor 4 ---
+  long duration4;
+  float distance4;
+  digitalWrite(trigPin4, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin4, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin4, LOW);
+
+  duration4 = pulseIn(echoPin4, HIGH, 30000);  // 30ms timeout
+  if (duration4 == 0) {
+    distance4 = 0;
+  } else {
+    distance4 = (duration4 / 2.0) / 29.1;
+  }
+
+  // Scale and cast to int for consistency (e.g., ×10 to keep one decimal place)
+  uint16_t scaledDistance4 = (uint16_t)(distance4 * 10);
+
+  // Send full 16-bit value as two bytes (little endian)
+  Serial.write((scaledDistance4 >> 3) & 0xFF);
+  Serial.write(scaledDistance4 & 0x07);
+
+
+  // End of packet
+  Serial.write(255);
+
+  delay(50); // ~20 Hz loop
+}
