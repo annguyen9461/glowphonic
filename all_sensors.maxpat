@@ -1,6 +1,18 @@
 {
 	"boxes" : [ 		{
 			"box" : 			{
+				"maxclass" : "comment",
+				"text" : "Check dist 1\nPress K\nPlug in ESP32\nClose and open Port d",
+				"linecount" : 4,
+				"patching_rect" : [ 413.0, 191.0, 150.0, 60.0 ],
+				"numoutlets" : 0,
+				"id" : "obj-50",
+				"numinlets" : 1
+			}
+
+		}
+, 		{
+			"box" : 			{
 				"maxclass" : "message",
 				"text" : "46",
 				"patching_rect" : [ 3551.0, 2545.0, 29.5, 22.0 ],
@@ -8,17 +20,6 @@
 				"outlettype" : [ "" ],
 				"id" : "obj-49",
 				"numinlets" : 2
-			}
-
-		}
-, 		{
-			"box" : 			{
-				"maxclass" : "comment",
-				"text" : "PRESS K",
-				"patching_rect" : [ 458.0, 218.0, 150.0, 20.0 ],
-				"numoutlets" : 0,
-				"id" : "obj-29",
-				"numinlets" : 1
 			}
 
 		}
@@ -1630,8 +1631,8 @@
 , 		{
 			"box" : 			{
 				"maxclass" : "newobj",
-				"text" : "scale 0 1300 90 1300",
-				"patching_rect" : [ 4164.705802917480469, 2707.44117546081543, 123.0, 22.0 ],
+				"text" : "scale 0 500 90 1300",
+				"patching_rect" : [ 4164.705802917480469, 2707.44117546081543, 117.0, 22.0 ],
 				"numoutlets" : 1,
 				"outlettype" : [ "" ],
 				"id" : "obj-370",
@@ -3843,16 +3844,8 @@
  ],
 	"lines" : [ 		{
 			"patchline" : 			{
-				"source" : [ "obj-49", 0 ],
-				"destination" : [ "obj-386", 0 ]
-			}
-
-		}
-, 		{
-			"patchline" : 			{
-				"source" : [ "obj-79", 4 ],
-				"destination" : [ "obj-49", 0 ],
-				"order" : 1
+				"source" : [ "obj-370", 0 ],
+				"destination" : [ "obj-371", 0 ]
 			}
 
 		}
@@ -3860,13 +3853,6 @@
 			"patchline" : 			{
 				"source" : [ "obj-26", 0 ],
 				"destination" : [ "obj-370", 0 ]
-			}
-
-		}
-, 		{
-			"patchline" : 			{
-				"source" : [ "obj-370", 0 ],
-				"destination" : [ "obj-371", 0 ]
 			}
 
 		}
@@ -3895,6 +3881,14 @@
 			"patchline" : 			{
 				"source" : [ "obj-8", 0 ],
 				"destination" : [ "obj-1", 0 ]
+			}
+
+		}
+, 		{
+			"patchline" : 			{
+				"source" : [ "obj-79", 4 ],
+				"destination" : [ "obj-49", 0 ],
+				"order" : 1
 			}
 
 		}
@@ -4529,6 +4523,13 @@
 			"patchline" : 			{
 				"source" : [ "obj-492", 0 ],
 				"destination" : [ "obj-476", 0 ]
+			}
+
+		}
+, 		{
+			"patchline" : 			{
+				"source" : [ "obj-49", 0 ],
+				"destination" : [ "obj-386", 0 ]
 			}
 
 		}
