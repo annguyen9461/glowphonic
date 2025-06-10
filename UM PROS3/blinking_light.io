@@ -1,43 +1,41 @@
 #include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+ #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
+#endif
 
-#define LED_PIN    4  // Use a safe ESP32 pin
-#define NUM_LEDS   60
+// Which pin on the Arduino is connected to the NeoPixels?
+#define LED_PIN    4
+// How many NeoPixels are attached to the Arduino?
+#define LED_COUNT 60
 
-Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+// Declare our NeoPixel strip object:
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial && millis() < 3000);  // Safe wait
-
+  while (!Serial);
   strip.begin();
-  strip.setBrightness(100);  // Optional
-  strip.show();              // Initialize all LEDs off
+  strip.setBrightness(100);
+  strip.show();  // Start with all LEDs off
 }
 
 void loop() {
-  int ledLevel;
   if (Serial.available()) {
-    int val = Serial.read();
-    if (val != -1 && val != '\n') {
-      ledLevel = constrain(val, 0, NUM_LEDS);
-
-      for (int i = 0; i < NUM_LEDS; i++) {
-        if (i < ledLevel)
-          strip.setPixelColor(i, strip.Color(255, 0, 0));
-        else
-          strip.setPixelColor(i, strip.Color(0, 0, 255));
-      }
-      strip.show();
+    // Clear all incoming data
+    while (Serial.available()) {
+      Serial.read();
     }
-  }
-   else {
-      ledLevel = 0;
-      for (int i = 0; i < NUM_LEDS; i++) {
-        if (i < ledLevel)
-          strip.setPixelColor(i, strip.Color(0, 0, 0));
-        else
-          strip.setPixelColor(i, 0);
-      }
-      strip.show();
+    
+    // Flash ON
+    for (int i = 0; i < LED_COUNT; i++) {
+      strip.setPixelColor(i, strip.Color(255, 0, 0)); // Red
+    }
+    strip.show();
+    
+    // Flash OFF
+    for (int i = 0; i < LED_COUNT; i++) {
+      strip.setPixelColor(i, strip.Color(0, 0, 0)); // Off
+    }
+    strip.show();
   }
 }
