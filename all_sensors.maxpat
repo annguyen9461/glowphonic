@@ -4176,6 +4176,13 @@
  ],
 	"lines" : [ 		{
 			"patchline" : 			{
+				"source" : [ "obj-389", 3 ],
+				"destination" : [ "obj-199", 4 ]
+			}
+
+		}
+, 		{
+			"patchline" : 			{
 				"source" : [ "obj-94", 0 ],
 				"destination" : [ "obj-79", 1 ]
 			}
@@ -5322,14 +5329,6 @@
 				"source" : [ "obj-389", 0 ],
 				"destination" : [ "obj-388", 1 ],
 				"order" : 0
-			}
-
-		}
-, 		{
-			"patchline" : 			{
-				"source" : [ "obj-389", 0 ],
-				"destination" : [ "obj-199", 4 ],
-				"order" : 2
 			}
 
 		}
