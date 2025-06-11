@@ -2,6 +2,8 @@
 
 Glowphonic is an interactive digital musical instrument that combines touch, motion, and visual feedback into a sculptural, expressive performance interface. Built inside a cherry blossom lampshade, its glowing petals play musical notes, respond to gestures, and pulse with light based on both user touch and audio amplitude.
 
+![Glowphonic](glowphonic.gif)
+
 ---
 
 ## Features
