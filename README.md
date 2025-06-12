@@ -38,7 +38,7 @@ Glowphonic is an interactive digital musical instrument that combines touch, mot
 
 ---
 
-## 🛠️ Hardware Components
+## Hardware Components
 
 - [Arduino Nano](https://store.arduino.cc/products/arduino-nano)
 - [ProS3 ESP32-S3 Dev Board](https://www.adafruit.com/product/5401)
